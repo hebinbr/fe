@@ -25,9 +25,20 @@ export interface BibleVerse {
   reflectionShort: string;
 }
 
+export interface ReadingPlanGoal {
+  type: 'daily' | 'weekly'; // Meta diária ou semanal
+  targetChapters: number; // Ex: 3 capítulos/dia ou 20 capítulos/semana
+  readingDaysPerWeek: number; // Ex: 5, 6 ou 7 dias na semana
+  startDate: string; // YYYY-MM-DD
+  reminderTime?: string; // Ex: '07:00'
+  customNotes?: string;
+}
+
 export interface ReadingPlanDay {
   day: number;
+  week?: number;
   title: string;
+  chapters?: string[]; // Ex: ["Gênesis 1", "Gênesis 2", "Gênesis 3"]
   passages: {
     reference: string;
     text: string;
@@ -40,9 +51,12 @@ export interface ReadingPlan {
   title: string;
   subtitle: string;
   description: string;
-  category: 'Evangelhos' | 'Sabedoria' | 'Novo Testamento' | 'Promessas';
+  category: 'Ano Bíblico' | 'Novo Testamento' | 'Evangelhos' | 'Sabedoria' | 'Promessas' | 'Personalizado';
   totalDays: number;
+  totalChapters: number;
   estimatedMinutesPerDay: number;
+  defaultGoal: ReadingPlanGoal;
+  customizable?: boolean;
   days: ReadingPlanDay[];
 }
 
@@ -123,6 +137,8 @@ export interface UserPreferences {
   bookmarkedDevotionals: string[]; // ids
   favoriteVerses: string[]; // ids
   planProgress: Record<string, number[]>; // planId -> completed day numbers
+  planCompletedChapters?: Record<string, string[]>; // planId -> completed chapter keys (e.g. "Gn 1", "Mt 2")
+  planGoals?: Record<string, ReadingPlanGoal>; // planId -> customized reading goal
   activePlanId: string;
   streakDays: number;
   lastActiveDate: string;

@@ -29,10 +29,17 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   bookmarkedDevotionals: [],
   favoriteVerses: ['v-01', 'v-02'],
   planProgress: {
+    'plan-ano-biblico': [],
+    'plan-novo-testamento-3-meses': [],
     'plan-evangelhos': [1],
     'plan-salmos-proverbios': [1],
   },
-  activePlanId: 'plan-evangelhos',
+  planCompletedChapters: {
+    'plan-evangelhos': ['João 1', 'João 2'],
+    'plan-salmos-proverbios': ['Salmo 1', 'Provérbios 1'],
+  },
+  planGoals: {},
+  activePlanId: 'plan-ano-biblico',
   streakDays: 4,
   lastActiveDate: new Date().toISOString().split('T')[0],
   fontSize: 'normal',

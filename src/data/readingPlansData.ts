@@ -1,6 +1,51 @@
-import { ReadingPlan } from '../types';
+import { ReadingPlan, ReadingPlanGoal, UserPreferences } from '../types';
+import {
+  generateAnnualBiblePlanDays,
+  generateNewTestament3MonthsDays,
+  createChapterList
+} from './biblePlanSchedules';
 
 export const READING_PLANS_DATA: ReadingPlan[] = [
+  {
+    id: 'plan-ano-biblico',
+    title: 'Ano Bíblico Completo',
+    subtitle: 'Toda a Escritura em 365 Dias (Gênesis ao Apocalipse)',
+    description: 'Leia a Bíblia inteira ao longo de 1 ano com uma divisão diária equilibrada entre Antigo Testamento, Salmos/Provérbios e Novo Testamento. Meta de 3 a 4 capítulos por dia.',
+    category: 'Ano Bíblico',
+    totalDays: 365,
+    totalChapters: 1189,
+    estimatedMinutesPerDay: 15,
+    defaultGoal: {
+      type: 'daily',
+      targetChapters: 3,
+      readingDaysPerWeek: 7,
+      startDate: new Date().toISOString().split('T')[0],
+      reminderTime: '07:00',
+      customNotes: 'Ler com oração antes de começar a rotina diária.'
+    },
+    customizable: true,
+    days: generateAnnualBiblePlanDays()
+  },
+  {
+    id: 'plan-novo-testamento-3-meses',
+    title: 'Novo Testamento em 3 Meses',
+    subtitle: 'Os 27 Livros da Nova Aliança em 90 Dias',
+    description: 'Uma caminhada transformadora pelos 4 Evangelhos, Atos dos Apóstolos, as Epístolas Paulinas e Pastorais até o Apocalipse. Meta de 2 a 3 capítulos por dia (ou 18-20 capítulos por semana).',
+    category: 'Novo Testamento',
+    totalDays: 90,
+    totalChapters: 260,
+    estimatedMinutesPerDay: 12,
+    defaultGoal: {
+      type: 'daily',
+      targetChapters: 3,
+      readingDaysPerWeek: 6,
+      startDate: new Date().toISOString().split('T')[0],
+      reminderTime: '07:30',
+      customNotes: 'Mergulhar nos ensinamentos de Jesus e da Igreja Primitiva.'
+    },
+    customizable: true,
+    days: generateNewTestament3MonthsDays()
+  },
   {
     id: 'plan-evangelhos',
     title: 'Os Evangelhos: Os Passos de Jesus',
@@ -8,11 +53,23 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
     description: 'Um roteiro focado na vida terrena de Jesus. A cada dia, leia os encontros transformadores de Cristo, Suas parábolas e Sua ressurreição.',
     category: 'Evangelhos',
     totalDays: 21,
+    totalChapters: 42,
     estimatedMinutesPerDay: 10,
+    defaultGoal: {
+      type: 'daily',
+      targetChapters: 2,
+      readingDaysPerWeek: 7,
+      startDate: new Date().toISOString().split('T')[0],
+      reminderTime: '08:00',
+      customNotes: 'Fixar os olhos na pessoa de Cristo.'
+    },
+    customizable: true,
     days: [
       {
         day: 1,
+        week: 1,
         title: 'O Verbo se Fez Carne',
+        chapters: ['João 1', 'João 2'],
         passages: [
           {
             reference: 'João 1:1-18',
@@ -23,7 +80,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 2,
+        week: 1,
         title: 'O Sermão do Monte: As Bem-Aventuranças',
+        chapters: ['Mateus 5'],
         passages: [
           {
             reference: 'Mateus 5:1-12',
@@ -34,7 +93,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 3,
+        week: 1,
         title: 'O Sal da Terra e a Luz do Mundo',
+        chapters: ['Mateus 6'],
         passages: [
           {
             reference: 'Mateus 5:13-16',
@@ -45,7 +106,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 4,
+        week: 1,
         title: 'Confiança na Providência do Pai',
+        chapters: ['Mateus 7'],
         passages: [
           {
             reference: 'Mateus 6:25-34',
@@ -56,7 +119,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 5,
+        week: 1,
         title: 'A Parábola do Bom Samaritano',
+        chapters: ['Lucas 10'],
         passages: [
           {
             reference: 'Lucas 10:25-37',
@@ -67,7 +132,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 6,
+        week: 1,
         title: 'O Filho Pródigo e o Pai Amoroso',
+        chapters: ['Lucas 15'],
         passages: [
           {
             reference: 'Lucas 15:11-24',
@@ -78,7 +145,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 7,
+        week: 1,
         title: 'O Bom Pastor que Dá a Vida',
+        chapters: ['João 10'],
         passages: [
           {
             reference: 'João 10:11-18',
@@ -96,11 +165,23 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
     description: 'A união perfeita entre a devoção emotiva dos Salmos e a sabedoria prática e ética de Provérbios.',
     category: 'Sabedoria',
     totalDays: 30,
+    totalChapters: 60,
     estimatedMinutesPerDay: 8,
+    defaultGoal: {
+      type: 'daily',
+      targetChapters: 2,
+      readingDaysPerWeek: 7,
+      startDate: new Date().toISOString().split('T')[0],
+      reminderTime: '07:00',
+      customNotes: 'Encher o coração de gratidão e louvor diário.'
+    },
+    customizable: true,
     days: [
       {
         day: 1,
+        week: 1,
         title: 'O Homem Justo e a Fonte da Sabedoria',
+        chapters: ['Salmo 1', 'Provérbios 1'],
         passages: [
           {
             reference: 'Salmo 1:1-3',
@@ -115,7 +196,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 2,
+        week: 1,
         title: 'O Pastor e a Confiança Inabalável',
+        chapters: ['Salmo 23', 'Provérbios 3'],
         passages: [
           {
             reference: 'Salmo 23:1-6',
@@ -130,7 +213,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 3,
+        week: 1,
         title: 'Refúgio na Fortaleza Eterna',
+        chapters: ['Salmo 46', 'Provérbios 4'],
         passages: [
           {
             reference: 'Salmo 46:1-5',
@@ -145,7 +230,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 4,
+        week: 1,
         title: 'O Guardião que Não Dorme',
+        chapters: ['Salmo 121', 'Provérbios 16'],
         passages: [
           {
             reference: 'Salmo 121:1-8',
@@ -167,11 +254,23 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
     description: 'Palavras de alento e garantias bíblicas que sustentaram homens e mulheres de fé através dos séculos.',
     category: 'Promessas',
     totalDays: 14,
+    totalChapters: 28,
     estimatedMinutesPerDay: 7,
+    defaultGoal: {
+      type: 'daily',
+      targetChapters: 2,
+      readingDaysPerWeek: 7,
+      startDate: new Date().toISOString().split('T')[0],
+      reminderTime: '21:00',
+      customNotes: 'Encontrar paz e ânimo antes do descanso.'
+    },
+    customizable: true,
     days: [
       {
         day: 1,
+        week: 1,
         title: 'Ele Sustenta os Seus Passos',
+        chapters: ['Isaías 41', 'Filipenses 4'],
         passages: [
           {
             reference: 'Isaías 41:10-13',
@@ -182,7 +281,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 2,
+        week: 1,
         title: 'Todas as Coisas Cooperam Para o Bem',
+        chapters: ['Romanos 8'],
         passages: [
           {
             reference: 'Romanos 8:28-32',
@@ -193,7 +294,9 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
       },
       {
         day: 3,
+        week: 1,
         title: 'Descanso Sob as Asas do Altíssimo',
+        chapters: ['Salmo 91'],
         passages: [
           {
             reference: 'Salmo 91:1-7',
@@ -205,3 +308,85 @@ export const READING_PLANS_DATA: ReadingPlan[] = [
     ]
   }
 ];
+
+export function getPlanGoal(planId: string, preferences: UserPreferences): ReadingPlanGoal {
+  const plan = READING_PLANS_DATA.find((p) => p.id === planId) || READING_PLANS_DATA[0];
+  if (preferences.planGoals && preferences.planGoals[planId]) {
+    return preferences.planGoals[planId];
+  }
+  return plan.defaultGoal;
+}
+
+export function getAllPlanChapters(plan: ReadingPlan): string[] {
+  const set = new Set<string>();
+  for (const d of plan.days) {
+    if (d.chapters) {
+      for (const ch of d.chapters) {
+        set.add(ch);
+      }
+    }
+  }
+  return Array.from(set);
+}
+
+export function calculateGoalStats(
+  plan: ReadingPlan,
+  goal: ReadingPlanGoal,
+  completedDays: number[],
+  completedChapters: string[] = []
+) {
+  const totalDays = plan.totalDays;
+  const totalChapters = plan.totalChapters || plan.days.reduce((acc, d) => acc + (d.chapters?.length || 1), 0);
+
+  // Compute total unique chapters completed
+  // If user completed chapters directly, use that; also union with chapters of completed days
+  const completedChaptersSet = new Set(completedChapters);
+  for (const dayNum of completedDays) {
+    const day = plan.days.find((d) => d.day === dayNum);
+    if (day?.chapters) {
+      for (const ch of day.chapters) {
+        completedChaptersSet.add(ch);
+      }
+    }
+  }
+  const totalCompletedChapters = completedChaptersSet.size;
+  const remainingChapters = Math.max(0, totalChapters - totalCompletedChapters);
+
+  // Calculate daily reading pace based on goal
+  let dailyTargetChapters = goal.targetChapters;
+  if (goal.type === 'weekly') {
+    const daysPerWeek = goal.readingDaysPerWeek || 6;
+    dailyTargetChapters = Math.max(1, Math.round((goal.targetChapters / daysPerWeek) * 10) / 10);
+  }
+
+  // Days needed to finish remaining chapters
+  const daysToFinish = Math.ceil(remainingChapters / (dailyTargetChapters || 1));
+
+  // Estimated finish date
+  const now = new Date();
+  const estimatedFinishDateObj = new Date(now.getTime() + daysToFinish * 24 * 60 * 60 * 1000);
+  const estimatedFinishDate = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).format(estimatedFinishDateObj);
+
+  // Progress percentages
+  const dayPercent = Math.min(100, Math.round((completedDays.length / totalDays) * 100));
+  const chapterPercent = Math.min(100, Math.round((totalCompletedChapters / totalChapters) * 100));
+
+  // Weekly target pace comparison
+  const weeklyTarget = goal.type === 'weekly' ? goal.targetChapters : goal.targetChapters * goal.readingDaysPerWeek;
+
+  return {
+    totalChapters,
+    totalCompletedChapters,
+    remainingChapters,
+    dailyTargetChapters,
+    weeklyTarget,
+    daysToFinish,
+    estimatedFinishDate,
+    dayPercent,
+    chapterPercent
+  };
+}
