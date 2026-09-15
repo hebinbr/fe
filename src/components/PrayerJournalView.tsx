@@ -34,6 +34,7 @@ import { PrayerEntry, PrayerType, PrayerCategory, PrayerStatus, UserPreferences 
 import { PRAYER_CATEGORIES, PRAYER_GUIDE_TEMPLATES } from '../data/prayersData';
 import { soundSynthesizer, devotionalTTS, TTSState } from '../utils/audioEngine';
 import { PrayerSummary } from './PrayerSummary';
+import { PrayerSearchBar } from './PrayerSearchBar';
 
 interface PrayerJournalViewProps {
   prayers: PrayerEntry[];
@@ -143,6 +144,15 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
     });
   }, [prayers, filterType, selectedCategory, searchQuery]);
 
+  // Count of prayers per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: prayers.length };
+    PRAYER_CATEGORIES.forEach((cat) => {
+      counts[cat.id] = prayers.filter((p) => p.category === cat.id).length;
+    });
+    return counts;
+  }, [prayers]);
+
   // Open Form for New
   const openNewForm = (initialType: PrayerType = 'pedido') => {
     setEditingPrayer(null);
@@ -244,7 +254,7 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
   return (
     <div id="prayer-journal-view" className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
       {/* Top Banner & Header */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D3F]">
@@ -276,6 +286,15 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Barra de Pesquisa no Topo do Diário de Oração */}
+        <PrayerSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          totalResults={filteredPrayers.length}
+          totalPrayers={prayers.length}
+          onClearSearch={() => setSearchQuery('')}
+        />
 
         {/* Biblical Verse of Encouragement */}
         <div
@@ -371,45 +390,113 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
           </button>
         </div>
 
-        {/* Search and Category Filter Row */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#998D7C] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              id="input-prayer-search"
-              type="text"
-              placeholder="Buscar por título, palavras da oração ou testemunho..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-[#D9CABE] bg-[#FAF8F5] text-xs font-medium text-[#2E281F] placeholder-[#9E9385] focus:outline-none focus:ring-1 focus:ring-[#8C6D3F]"
-            />
-            {searchQuery && (
+        {/* Category Filter Chips & Active Badges */}
+        <div id="prayer-category-filters-container" className="space-y-2 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#736554] flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-[#8C6D3F]" />
+              <span>Filtrar por Categoria (ex: Saúde, Família, Trabalho, Pessoal):</span>
+            </span>
+
+            {selectedCategory !== 'all' && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#998D7C] hover:text-[#2E281F]"
+                id="btn-clear-category-filter"
+                onClick={() => setSelectedCategory('all')}
+                className="text-xs font-semibold text-[#8C6D3F] hover:text-[#6E522B] hover:underline flex items-center gap-1"
               >
-                <X className="w-3.5 h-3.5" />
+                <span>Mostrar todas</span>
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Category Dropdown/Selector */}
-          <div className="flex items-center gap-2 shrink-0">
-            <select
-              id="select-prayer-category"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-[#D9CABE] bg-[#FAF8F5] text-xs font-medium text-[#3E3427] focus:outline-none focus:ring-1 focus:ring-[#8C6D3F]"
+          {/* Interactive Category Chips Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+            <button
+              id="filter-category-chip-all"
+              onClick={() => setSelectedCategory('all')}
+              className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                selectedCategory === 'all'
+                  ? 'bg-[#8C6D3F] text-white shadow-2xs font-semibold'
+                  : 'bg-[#FAF8F5] text-[#554636] hover:bg-[#F3EDE2] border border-[#D9CABE]'
+              }`}
             >
-              <option value="all">Todas as Categorias</option>
-              {PRAYER_CATEGORIES.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+              <span>Todas as Categorias</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  selectedCategory === 'all'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-[#EAE0D1] text-[#6E5D48]'
+                }`}
+              >
+                {categoryCounts['all']}
+              </span>
+            </button>
+
+            {PRAYER_CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              const count = categoryCounts[cat.id] || 0;
+              return (
+                <button
+                  key={cat.id}
+                  id={`filter-category-chip-${cat.id}`}
+                  onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
+                  className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-[#8C6D3F] text-white shadow-2xs font-semibold'
+                      : 'bg-[#FAF8F5] text-[#554636] hover:bg-[#F3EDE2] border border-[#D9CABE]'
+                  }`}
+                >
+                  <span className={isSelected ? 'text-white' : 'text-[#8C6D3F]'}>
+                    {renderCategoryIcon(cat.id, 'w-3.5 h-3.5')}
+                  </span>
+                  <span>{cat.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isSelected
+                        ? 'bg-white/25 text-white'
+                        : 'bg-[#EAE0D1] text-[#6E5D48]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Active Search / Category Notice Tag */}
+          {(searchQuery || selectedCategory !== 'all') && (
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {selectedCategory !== 'all' && (
+                <div className="flex items-center gap-1.5 bg-[#F3EDE2] text-[#6E5738] px-2.5 py-1 rounded-xl text-xs font-medium border border-[#E3D6C4]">
+                  <span>Categoria: <strong>{getCategoryMeta(selectedCategory as PrayerCategory).label}</strong></span>
+                  <button
+                    id="btn-remove-selected-category-tag"
+                    onClick={() => setSelectedCategory('all')}
+                    className="text-[#968066] hover:text-[#2C241B]"
+                    title="Remover filtro de categoria"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {searchQuery && (
+                <div className="flex items-center gap-1.5 bg-[#F3EDE2] text-[#6E5738] px-2.5 py-1 rounded-xl text-xs font-medium border border-[#E3D6C4]">
+                  <span>Buscando: <strong>"{searchQuery}"</strong></span>
+                  <button
+                    id="btn-remove-search-tag"
+                    onClick={() => setSearchQuery('')}
+                    className="text-[#968066] hover:text-[#2C241B]"
+                    title="Limpar busca"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -634,16 +721,27 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
               Nenhum registro encontrado
             </h3>
             <p className="text-xs text-[#7A7165] max-w-md mx-auto">
-              {searchQuery || selectedCategory !== 'all' || filterType !== 'all'
-                ? 'Tente remover os filtros ou buscar por outras palavras-chave.'
+              {searchQuery
+                ? `Nenhum pedido ou agradecimento encontrado para a palavra-chave "${searchQuery}".`
+                : selectedCategory !== 'all' || filterType !== 'all'
+                ? 'Tente remover os filtros para visualizar outros registros.'
                 : 'Seu diário de oração está pronto para receber suas súplicas e ações de graça.'}
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+              {searchQuery && (
+                <button
+                  id="btn-empty-clear-search"
+                  onClick={() => setSearchQuery('')}
+                  className="px-4 py-2 rounded-xl border border-[#8C6D3F] text-[#8C6D3F] hover:bg-[#F3EDE2] text-xs font-semibold shadow-xs transition-colors"
+                >
+                  Limpar busca "{searchQuery}"
+                </button>
+              )}
               <button
                 onClick={() => openNewForm('pedido')}
-                className="px-4 py-2 rounded-xl bg-[#8C6D3F] hover:bg-[#785C32] text-white text-xs font-semibold shadow-xs"
+                className="px-4 py-2 rounded-xl bg-[#8C6D3F] hover:bg-[#785C32] text-white text-xs font-semibold shadow-xs transition-colors"
               >
-                Escrever Meu Primeiro Pedido ou Agradecimento
+                Escrever Novo Pedido
               </button>
             </div>
           </div>
@@ -733,29 +831,66 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
                 />
               </div>
 
-              {/* Category & Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#4E4437]">
-                    Categoria
-                  </label>
-                  <select
-                    id="select-form-category"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value as PrayerCategory)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[#D9CABE] bg-[#FAF8F5] text-xs font-medium text-[#2E281F] focus:outline-none focus:ring-1 focus:ring-[#8C6D3F]"
-                  >
-                    {PRAYER_CATEGORIES.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
+              {/* Category Selection Grid & Date */}
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[#4E4437] flex items-center gap-1.5">
+                      <Filter className="w-3.5 h-3.5 text-[#8C6D3F]" />
+                      <span>Categoria do Pedido * (ex: Saúde, Família, Trabalho, Pessoal)</span>
+                    </label>
+                    <span className="text-[11px] font-medium text-[#8C6D3F]">
+                      Selecionada: <strong>{getCategoryMeta(formCategory).label}</strong>
+                    </span>
+                  </div>
+
+                  {/* Interactive Visual Category Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+                    {PRAYER_CATEGORIES.map((cat) => {
+                      const isSelected = formCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          id={`btn-form-category-${cat.id}`}
+                          onClick={() => setFormCategory(cat.id)}
+                          className={`p-2.5 rounded-xl text-xs font-semibold border flex items-center gap-2 transition-all text-left ${
+                            isSelected
+                              ? 'bg-[#8C6D3F] text-white border-[#8C6D3F] shadow-xs scale-[1.02]'
+                              : 'bg-[#FAF8F5] text-[#4E4437] border-[#D9CABE] hover:bg-[#F3EDE2] hover:border-[#C4B3A2]'
+                          }`}
+                        >
+                          <span className={isSelected ? 'text-white' : 'text-[#8C6D3F] shrink-0'}>
+                            {renderCategoryIcon(cat.id, 'w-4 h-4')}
+                          </span>
+                          <span className="truncate">{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Dropdown Alternative for Accessibility */}
+                  <div className="pt-1 flex items-center gap-2 text-xs text-[#7A6F60]">
+                    <span className="shrink-0 text-[11px]">Ou selecione na lista:</span>
+                    <select
+                      id="select-form-category"
+                      value={formCategory}
+                      onChange={(e) => setFormCategory(e.target.value as PrayerCategory)}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-[#D9CABE] bg-[#FAF8F5] text-xs font-medium text-[#2E281F] focus:outline-none focus:ring-1 focus:ring-[#8C6D3F]"
+                    >
+                      {PRAYER_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
+                {/* Date Input */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[#4E4437]">
-                    Data
+                    Data do Registro
                   </label>
                   <input
                     id="input-form-date"
