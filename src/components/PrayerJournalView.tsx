@@ -28,13 +28,19 @@ import {
   Users,
   User,
   Bookmark,
-  Send
+  Send,
+  FileDown,
+  Bell,
+  BellRing,
+  CalendarCheck
 } from 'lucide-react';
-import { PrayerEntry, PrayerType, PrayerCategory, PrayerStatus, UserPreferences } from '../types';
+import { PrayerEntry, PrayerType, PrayerCategory, PrayerStatus, UserPreferences, PrayerReminder } from '../types';
 import { PRAYER_CATEGORIES, PRAYER_GUIDE_TEMPLATES } from '../data/prayersData';
 import { soundSynthesizer, devotionalTTS, TTSState } from '../utils/audioEngine';
 import { PrayerSummary } from './PrayerSummary';
 import { PrayerSearchBar } from './PrayerSearchBar';
+import { PrayerPdfExportModal } from './PrayerPdfExportModal';
+import { PrayerReminderModal } from './PrayerReminderModal';
 
 interface PrayerJournalViewProps {
   prayers: PrayerEntry[];
@@ -65,6 +71,8 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
   // Modals & Drawers
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [isPdfExportOpen, setIsPdfExportOpen] = useState(false);
+  const [reminderModalPrayer, setReminderModalPrayer] = useState<PrayerEntry | null>(null);
   const [editingPrayer, setEditingPrayer] = useState<PrayerEntry | null>(null);
 
   // Mark as answered modal
@@ -267,6 +275,17 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              id="btn-open-pdf-export"
+              onClick={() => setIsPdfExportOpen(true)}
+              className="px-3.5 py-2 rounded-xl border border-[#D9CABE] bg-[#FAF8F5] hover:bg-[#F3EDE2] text-[#6E5839] text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Exportar pedidos e testemunhos para arquivo PDF"
+            >
+              <FileDown className="w-4 h-4 text-[#8C6D3F]" />
+              <span className="hidden sm:inline">Exportar PDF</span>
+              <span className="sm:hidden">PDF</span>
+            </button>
+
+            <button
               id="btn-open-prayer-templates"
               onClick={() => setIsTemplatesOpen(true)}
               className="px-3.5 py-2 rounded-xl border border-[#D9CABE] bg-[#FAF8F5] hover:bg-[#F3EDE2] text-[#6E5839] text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -319,6 +338,7 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
       <PrayerSummary
         prayers={prayers}
         onSelectFilterType={(type) => setFilterType(type)}
+        onOpenPdfExport={() => setIsPdfExportOpen(true)}
       />
 
       {/* Filters & Search Controls */}
@@ -649,6 +669,49 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
                   </div>
                 )}
 
+                {/* Active Scheduled Reminder Banner (If set) */}
+                {item.reminder && item.reminder.enabled && (
+                  <div
+                    id={`card-reminder-banner-${item.id}`}
+                    className="mb-4 p-3 sm:p-3.5 rounded-2xl bg-[#FAF3E8] border border-[#E9D9C3] flex items-center justify-between gap-3 text-xs shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2.5 text-[#6B4F22]">
+                      <div className="p-1.5 rounded-xl bg-[#ECDCC4] text-[#8C6D3F] shrink-0">
+                        <BellRing className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-bold flex flex-wrap items-center gap-1.5 text-[#4D3613]">
+                          <span>Lembrete no Calendário</span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#E5D2B8] text-[#543C15]">
+                            {item.reminder.frequency === 'daily'
+                              ? 'Diário'
+                              : item.reminder.frequency === 'weekdays'
+                              ? 'Seg a Sex'
+                              : 'Data Marcada'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#78613F] mt-0.5">
+                          Horário: <strong>{item.reminder.scheduledTime}</strong>
+                          {item.reminder.frequency === 'once' && (
+                            <span> no dia {new Intl.DateTimeFormat('pt-BR').format(new Date(item.reminder.scheduledDate + 'T12:00:00'))}</span>
+                          )}
+                          {item.reminder.notes && (
+                            <span className="hidden sm:inline"> • "{item.reminder.notes}"</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      id={`btn-manage-card-reminder-${item.id}`}
+                      onClick={() => setReminderModalPrayer(item)}
+                      className="px-3 py-1.5 rounded-xl bg-[#EFE3CF] hover:bg-[#E4D2B6] text-[#543C15] font-semibold text-xs transition-colors shrink-0"
+                    >
+                      Ajustar
+                    </button>
+                  </div>
+                )}
+
                 {/* Footer Controls: "Orei Hoje" & Status Toggle */}
                 <div className="pt-3 border-t border-[#EAE3D6] flex flex-wrap items-center justify-between gap-3">
                   {/* Clamor Counter */}
@@ -674,36 +737,58 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Status Toggle Button */}
-                  {item.type === 'pedido' && (
-                    <div>
-                      {item.status === 'ativo' ? (
-                        <button
-                          id={`btn-mark-answered-${item.id}`}
-                          onClick={() => {
-                            setAnsweringPrayerId(item.id);
-                            setTestimonyText('');
-                            setAnswerDate(new Date().toISOString().split('T')[0]);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-[#EAF5ED] hover:bg-[#DBEEE0] text-[#1E6B35] text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[#C5E3CE]"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Marcar como Respondido</span>
-                        </button>
-                      ) : (
-                        <button
-                          id={`btn-reopen-prayer-${item.id}`}
-                          onClick={() => {
-                            onUpdatePrayer(item.id, { status: 'ativo' });
-                            soundSynthesizer.playChime();
-                          }}
-                          className="px-3 py-1.5 rounded-xl border border-[#D9CABE] text-[#6E6354] hover:bg-[#FAF8F5] text-xs font-medium flex items-center gap-1.5 transition-colors"
-                        >
-                          <span>Reabrir Oração</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {/* Actions Group: Calendar Reminder & Status */}
+                  <div className="flex items-center gap-2">
+                    {/* Calendar Reminder Button */}
+                    <button
+                      id={`btn-calendar-reminder-${item.id}`}
+                      onClick={() => setReminderModalPrayer(item)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border shadow-2xs ${
+                        item.reminder?.enabled
+                          ? 'bg-[#FAF2E3] text-[#7A551E] border-[#E8D2B4] hover:bg-[#F2E5D0]'
+                          : 'bg-[#FAF8F5] text-[#6E5D4B] border-[#D9CABE] hover:bg-[#F3EDE2]'
+                      }`}
+                      title={
+                        item.reminder?.enabled
+                          ? 'Ver ou alterar agendamento no calendário e notificações'
+                          : 'Agendar lembrete no calendário e receber notificação'
+                      }
+                    >
+                      <Bell className={`w-3.5 h-3.5 ${item.reminder?.enabled ? 'text-[#966723] fill-[#966723]' : 'text-[#8C6D3F]'}`} />
+                      <span>{item.reminder?.enabled ? 'Lembrete no Calendário' : 'Lembrar de Orar'}</span>
+                    </button>
+
+                    {/* Status Toggle Button */}
+                    {item.type === 'pedido' && (
+                      <div>
+                        {item.status === 'ativo' ? (
+                          <button
+                            id={`btn-mark-answered-${item.id}`}
+                            onClick={() => {
+                              setAnsweringPrayerId(item.id);
+                              setTestimonyText('');
+                              setAnswerDate(new Date().toISOString().split('T')[0]);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-[#EAF5ED] hover:bg-[#DBEEE0] text-[#1E6B35] text-xs font-semibold flex items-center gap-1.5 transition-colors border border-[#C5E3CE]"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Marcar como Respondido</span>
+                          </button>
+                        ) : (
+                          <button
+                            id={`btn-reopen-prayer-${item.id}`}
+                            onClick={() => {
+                              onUpdatePrayer(item.id, { status: 'ativo' });
+                              soundSynthesizer.playChime();
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-[#D9CABE] text-[#6E6354] hover:bg-[#FAF8F5] text-xs font-medium flex items-center gap-1.5 transition-colors"
+                          >
+                            <span>Reabrir Oração</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -1086,6 +1171,26 @@ export const PrayerJournalView: React.FC<PrayerJournalViewProps> = ({
           </div>
         </div>
       )}
+      {/* Modal de Exportação em PDF */}
+      <PrayerPdfExportModal
+        isOpen={isPdfExportOpen}
+        onClose={() => setIsPdfExportOpen(false)}
+        prayers={prayers}
+        currentCategoryFilter={selectedCategory}
+      />
+
+      {/* Modal de Lembrete no Calendário & Notificação Agendada */}
+      <PrayerReminderModal
+        isOpen={!!reminderModalPrayer}
+        onClose={() => setReminderModalPrayer(null)}
+        prayer={reminderModalPrayer}
+        onSaveReminder={(prayerId, reminder) => {
+          onUpdatePrayer(prayerId, { reminder });
+        }}
+        onRemoveReminder={(prayerId) => {
+          onUpdatePrayer(prayerId, { reminder: undefined });
+        }}
+      />
     </div>
   );
 };

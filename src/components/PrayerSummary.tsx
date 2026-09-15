@@ -23,7 +23,8 @@ import {
   Heart,
   Trophy,
   Filter,
-  Check
+  Check,
+  FileDown
 } from 'lucide-react';
 import { PrayerEntry } from '../types';
 import { PRAYER_CATEGORIES } from '../data/prayersData';
@@ -31,6 +32,7 @@ import { PRAYER_CATEGORIES } from '../data/prayersData';
 interface PrayerSummaryProps {
   prayers: PrayerEntry[];
   onSelectFilterType?: (type: 'all' | 'pedido_ativo' | 'respondido' | 'agradecimento') => void;
+  onOpenPdfExport?: () => void;
 }
 
 const MONTH_NAMES = [
@@ -46,6 +48,7 @@ const FULL_MONTH_NAMES = [
 export const PrayerSummary: React.FC<PrayerSummaryProps> = ({
   prayers,
   onSelectFilterType,
+  onOpenPdfExport,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [chartType, setChartType] = useState<'bar' | 'area'>('bar');
@@ -284,6 +287,19 @@ export const PrayerSummary: React.FC<PrayerSummaryProps> = ({
               Tendência
             </button>
           </div>
+
+          {/* Export PDF Button */}
+          {onOpenPdfExport && (
+            <button
+              id="btn-summary-export-pdf"
+              onClick={onOpenPdfExport}
+              className="px-2.5 py-1.5 rounded-xl border border-[#D9CDBF] bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#6E5F50] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              title="Exportar pedidos e testemunhos para PDF"
+            >
+              <FileDown className="w-3.5 h-3.5 text-[#8C6D3F]" />
+              <span className="hidden sm:inline">Exportar PDF</span>
+            </button>
+          )}
 
           {/* Toggle Expand/Collapse */}
           <button

@@ -88,6 +88,18 @@ export type PrayerType = 'pedido' | 'agradecimento';
 export type PrayerCategory = 'familia' | 'saude' | 'trabalho' | 'espiritual' | 'amigos' | 'pessoal' | 'outros';
 export type PrayerStatus = 'ativo' | 'respondido' | 'descansando';
 
+export interface PrayerReminder {
+  id: string;
+  prayerId: string;
+  scheduledTime: string; // 'HH:mm'
+  scheduledDate: string; // 'YYYY-MM-DD'
+  frequency: 'once' | 'daily' | 'weekdays';
+  enabled: boolean;
+  notes?: string;
+  createdAt: string;
+  lastNotifiedDate?: string;
+}
+
 export interface PrayerEntry {
   id: string;
   type: PrayerType; // 'pedido' | 'agradecimento'
@@ -101,6 +113,7 @@ export interface PrayerEntry {
   timesPrayed: number; // Quantidade de momentos de oração
   lastPrayedAt?: string;
   isFavorite?: boolean;
+  reminder?: PrayerReminder;
 }
 
 export type AppTab = 'devocional' | 'versiculos' | 'diario-oracao' | 'audios' | 'plano' | 'notificacoes';

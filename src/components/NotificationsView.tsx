@@ -10,9 +10,11 @@ import {
   Sparkles,
   Send,
   Trash2,
-  Check
+  Check,
+  Calendar,
+  Heart
 } from 'lucide-react';
-import { NotificationSchedule, InAppNotification } from '../types';
+import { NotificationSchedule, InAppNotification, PrayerEntry } from '../types';
 import { soundSynthesizer } from '../utils/audioEngine';
 
 interface NotificationsViewProps {
@@ -22,6 +24,8 @@ interface NotificationsViewProps {
   onMarkAllAsRead: () => void;
   onClearNotifications: () => void;
   onAddNotification: (item: InAppNotification) => void;
+  prayers?: PrayerEntry[];
+  onNavigateToJournal?: () => void;
 }
 
 export const NotificationsView: React.FC<NotificationsViewProps> = ({
@@ -31,6 +35,8 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   onMarkAllAsRead,
   onClearNotifications,
   onAddNotification,
+  prayers = [],
+  onNavigateToJournal,
 }) => {
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' && 'Notification' in window
@@ -346,6 +352,86 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Active Prayer Reminders Section */}
+      {(() => {
+        const activePrayerReminders = prayers.filter((p) => p.reminder && p.reminder.enabled);
+        if (activePrayerReminders.length === 0) return null;
+
+        return (
+          <div id="prayer-reminders-section" className="space-y-4 pt-4 border-t border-[#E8E1D5]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-[#FAF3E8] text-[#8C6D3F] border border-[#E9D9C3]">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif-devotional text-lg sm:text-xl font-bold text-[#2B2319]">
+                    Lembretes de Oração Agendados
+                  </h3>
+                  <p className="text-xs text-[#7A6F5F]">
+                    Pedidos com horários e alarmes definidos para orar
+                  </p>
+                </div>
+              </div>
+
+              {onNavigateToJournal && (
+                <button
+                  id="btn-nav-journal-from-notifs"
+                  onClick={onNavigateToJournal}
+                  className="text-xs font-semibold text-[#8C6D3F] hover:underline"
+                >
+                  Abrir Diário
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {activePrayerReminders.map((p) => {
+                const rem = p.reminder!;
+                return (
+                  <div
+                    key={p.id}
+                    id={`prayer-reminder-card-${p.id}`}
+                    className="p-4 rounded-2xl bg-[#FFFDFB] border border-[#EADBCC] shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-bold text-[#35291E] line-clamp-1">
+                        {p.title}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF0DE] text-[#7A551E] shrink-0">
+                        {rem.scheduledTime}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#6B5E4E] line-clamp-2">
+                      {rem.notes || p.description}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[11px] text-[#8C7D6B] pt-2 border-t border-[#F2ECE1]">
+                      <span>
+                        {rem.frequency === 'daily'
+                          ? 'Diariamente'
+                          : rem.frequency === 'weekdays'
+                          ? 'Dias Úteis'
+                          : `Data: ${rem.scheduledDate}`}
+                      </span>
+                      {onNavigateToJournal && (
+                        <button
+                          onClick={onNavigateToJournal}
+                          className="text-[#8C6D3F] font-semibold hover:underline"
+                        >
+                          Ver no Diário →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* In-App Notifications Inbox / History */}
       <div className="space-y-4 pt-4 border-t border-[#E8E1D5]">

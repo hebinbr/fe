@@ -17,6 +17,7 @@ import {
 } from './types';
 import { INITIAL_PRAYERS } from './data/prayersData';
 import { soundSynthesizer, devotionalTTS, TTSState } from './utils/audioEngine';
+import { triggerPrayerBrowserNotification } from './utils/calendarReminder';
 
 const STORAGE_PREFS_KEY = 'devocional_app_preferences_v1';
 const STORAGE_NOTIF_KEY = 'devocional_app_notifications_v1';
@@ -182,6 +183,77 @@ export default function App() {
       setTtsState({ ...state });
     });
     return () => unsubscribe();
+  }, []);
+
+  // Background Prayer Reminder & Notification Checker
+  useEffect(() => {
+    const checkScheduledAlarms = () => {
+      const now = new Date();
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHours}:${currentMinutes}`;
+      const todayIso = now.toISOString().split('T')[0];
+      const dayOfWeek = now.getDay(); // 0: Sun, 1-5: Mon-Fri, 6: Sat
+
+      setPrayers((prevPrayers) => {
+        let hasChanges = false;
+        const newNotifications: InAppNotification[] = [];
+
+        const updated = prevPrayers.map((prayer) => {
+          if (!prayer.reminder || !prayer.reminder.enabled) return prayer;
+          const rem = prayer.reminder;
+
+          if (rem.scheduledTime !== currentTimeStr) return prayer;
+          if (rem.lastNotifiedDate === todayIso) return prayer;
+
+          let shouldTrigger = false;
+          if (rem.frequency === 'once') {
+            shouldTrigger = rem.scheduledDate === todayIso;
+          } else if (rem.frequency === 'daily') {
+            shouldTrigger = true;
+          } else if (rem.frequency === 'weekdays') {
+            shouldTrigger = dayOfWeek >= 1 && dayOfWeek <= 5;
+          }
+
+          if (shouldTrigger) {
+            hasChanges = true;
+            triggerPrayerBrowserNotification(prayer, rem.notes);
+
+            newNotifications.push({
+              id: `prayer-notif-${prayer.id}-${Date.now()}`,
+              timestamp: `Hoje, ${currentTimeStr}`,
+              title: `Momento de Clamor: ${prayer.title} 🕊️`,
+              body: rem.notes
+                ? `${rem.notes} — Pedido: "${prayer.title}"`
+                : `Hora marcada para interceder pelo seu pedido: "${prayer.title}". Coloque diante de Deus em oração!`,
+              type: 'system',
+              read: false,
+            });
+
+            return {
+              ...prayer,
+              reminder: {
+                ...rem,
+                lastNotifiedDate: todayIso,
+                enabled: rem.frequency === 'once' ? false : true,
+              },
+            };
+          }
+
+          return prayer;
+        });
+
+        if (newNotifications.length > 0) {
+          setNotifications((prev) => [...newNotifications, ...prev]);
+        }
+
+        return hasChanges ? updated : prevPrayers;
+      });
+    };
+
+    checkScheduledAlarms();
+    const timer = setInterval(checkScheduledAlarms, 25000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleUpdatePreferences = (updated: Partial<UserPreferences>) => {
@@ -378,6 +450,8 @@ export default function App() {
             onMarkAllAsRead={handleMarkAllNotificationsAsRead}
             onClearNotifications={handleClearNotifications}
             onAddNotification={handleAddNotification}
+            prayers={prayers}
+            onNavigateToJournal={() => setActiveTab('diario-oracao')}
           />
         )}
       </main>
