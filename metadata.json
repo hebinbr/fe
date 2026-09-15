@@ -1,0 +1,7 @@
+{
+  "name": "Devocional Diário & Bíblia",
+  "description": "App completo com devocionais diários, versículos inspiradores, diário e resumo de oração com gráficos de pedidos realizados vs. respondidos, áudios com meditação e planos de leitura bíblica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

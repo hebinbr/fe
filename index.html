@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <script>
+      (function() {
+        try {
+          var rawFetch = window.fetch;
+          if (typeof rawFetch === 'function') {
+            var currentFetch = typeof rawFetch.bind === 'function' ? rawFetch.bind(window) : rawFetch;
+            try {
+              Object.defineProperty(window, 'fetch', {
+                get: function() { return currentFetch; },
+                set: function(fn) { currentFetch = fn; },
+                configurable: true,
+                enumerable: true
+              });
+            } catch (err1) {
+              try {
+                Object.defineProperty(window, 'fetch', {
+                  value: currentFetch,
+                  writable: true,
+                  configurable: true,
+                  enumerable: true
+                });
+              } catch (err2) {}
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Devocional Diário & Bíblia</title>
+    <meta name="description" content="App completo com devocionais diários, versículos inspiradores, diário e resumo de oração com gráficos de pedidos realizados vs. respondidos, áudios com meditação e planos de leitura bíblica." />
+    <meta property="og:title" content="Devocional Diário & Bíblia" />
+    <meta property="og:description" content="App completo com devocionais diários, versículos inspiradores, diário e resumo de oração com gráficos de pedidos realizados vs. respondidos, áudios com meditação e planos de leitura bíblica." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#FAF8F5] text-[#24211D] antialiased selection:bg-[#E2D5BE] selection:text-[#1F1C18]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
