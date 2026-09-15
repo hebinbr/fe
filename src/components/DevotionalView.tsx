@@ -15,12 +15,27 @@ import {
   Play,
   Square,
   Bookmark,
-  HeartHandshake
+  HeartHandshake,
+  MessageCircle,
+  Twitter,
+  Instagram,
+  Copy,
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { Devotional, UserPreferences } from '../types';
 import { DEVOTIONALS_DATA } from '../data/devotionalsData';
 import { devotionalTTS, soundSynthesizer, TTSState } from '../utils/audioEngine';
 import { ShareVerseModal } from './ShareVerseModal';
+import {
+  formatDevotionalForWhatsApp,
+  formatDevotionalForTwitter,
+  formatDevotionalForInstagram,
+  formatVerseForWhatsApp,
+  getWhatsAppShareUrl,
+  getTwitterShareUrl,
+  copyTextToClipboard
+} from '../utils/shareUtils';
 
 interface DevotionalViewProps {
   preferences: UserPreferences;
@@ -44,13 +59,21 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
   const [selectedDevotionalIndex, setSelectedDevotionalIndex] = useState(0);
   const currentDevotional = DEVOTIONALS_DATA[selectedDevotionalIndex] || DEVOTIONALS_DATA[0];
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [devotionalToShare, setDevotionalToShare] = useState<Devotional | undefined>(currentDevotional);
   const [showCompletedToast, setShowCompletedToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [copiedDevotional, setCopiedDevotional] = useState(false);
 
   // Journal note state for this devotional
   const currentNote = preferences.journalNotes[currentDevotional.id] || '';
 
   const isCompleted = preferences.completedDevotionals.includes(currentDevotional.id);
   const isBookmarked = preferences.bookmarkedDevotionals.includes(currentDevotional.id);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const handleToggleComplete = () => {
     const alreadyCompleted = preferences.completedDevotionals.includes(currentDevotional.id);
@@ -61,7 +84,6 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
       updatedCompleted = preferences.completedDevotionals.filter((id) => id !== currentDevotional.id);
     } else {
       updatedCompleted = [...preferences.completedDevotionals, currentDevotional.id];
-      // Increment streak if not completed today
       newStreak += 1;
       setShowCompletedToast(true);
       soundSynthesizer.playChime();
@@ -105,6 +127,26 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
     }
   };
 
+  const handleCopyDevotionalText = async () => {
+    const text = formatDevotionalForWhatsApp(currentDevotional);
+    const success = await copyTextToClipboard(text);
+    if (success) {
+      soundSynthesizer.playChime();
+      setCopiedDevotional(true);
+      showToast('Devocional completo copiado para a área de transferência!');
+      setTimeout(() => setCopiedDevotional(false), 2500);
+    }
+  };
+
+  const handleCopyDevotionalForInstagram = async () => {
+    const text = formatDevotionalForInstagram(currentDevotional);
+    const success = await copyTextToClipboard(text);
+    if (success) {
+      soundSynthesizer.playChime();
+      showToast('Texto copiado para o Instagram! Cole na legenda ou no sticker dos Stories.');
+    }
+  };
+
   // Font size classes
   const fontSizes = {
     normal: {
@@ -125,8 +167,19 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
   }[preferences.fontSize];
 
   return (
-    <div id="devotional-view" className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
-      {/* Toast Confirmation */}
+    <div id="devotional-view" className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 relative">
+      {/* General Toast Notification */}
+      {toastMessage && (
+        <div
+          id="toast-devotional-action"
+          className="fixed top-20 right-4 z-50 bg-[#2B2319] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#483B2B] text-xs flex items-center gap-2.5 animate-fade-in"
+        >
+          <Sparkles className="w-4 h-4 text-[#E6C995]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Toast Confirmation for Daily Complete */}
       {showCompletedToast && (
         <div
           id="toast-devotional-completed"
@@ -177,8 +230,8 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
           </button>
         </div>
 
-        {/* Audio Narration & Ambient Controls */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        {/* Audio Narration, Ambient Controls, & Share */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
           <button
             id="btn-toggle-narration"
             onClick={handleToggleReadAloud}
@@ -242,6 +295,20 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
           >
             <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </button>
+
+          {/* Share Devotional Header Button */}
+          <button
+            id="btn-share-devotional-header"
+            onClick={() => {
+              setDevotionalToShare(currentDevotional);
+              setShareModalOpen(true);
+            }}
+            title="Compartilhar devocional completo"
+            className="p-2 rounded-xl border border-[#E2D8C9] bg-[#FAF8F5] text-[#6C6356] hover:bg-[#EFE9DF] hover:text-[#2B2319] transition-colors flex items-center gap-1.5"
+          >
+            <Share2 className="w-4 h-4 text-[#8C6D3F]" />
+            <span className="text-xs font-semibold hidden md:inline">Compartilhar</span>
+          </button>
         </div>
       </div>
 
@@ -273,21 +340,61 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
         id="key-verse-card"
         className="p-6 sm:p-7 rounded-2xl bg-[#F6F0E6] border border-[#E8DCC9] shadow-xs relative overflow-hidden"
       >
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E2D4BF]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-[#E2D4BF] gap-2">
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-[#8C6D3F]" />
             <span className="font-semibold text-xs uppercase tracking-wider text-[#6B5A42]">
               Palavra do Dia • {currentDevotional.keyVerse.reference}
             </span>
           </div>
-          <button
-            id="btn-share-verse"
-            onClick={() => setShareModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-medium text-[#735A33] hover:text-[#42321B] px-2.5 py-1 rounded-lg hover:bg-[#EAE0D0] transition-colors"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Compartilhar</span>
-          </button>
+
+          <div className="flex items-center gap-1">
+            {/* Direct WhatsApp Share for Key Verse */}
+            <a
+              id="btn-quick-wa-key-verse"
+              href={getWhatsAppShareUrl(
+                formatVerseForWhatsApp({
+                  text: currentDevotional.keyVerse.text,
+                  reference: currentDevotional.keyVerse.reference,
+                  theme: currentDevotional.theme
+                })
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg text-[#25D366] hover:bg-[#EBFBF0] transition-colors"
+              title="Compartilhar versículo no WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </a>
+
+            {/* Direct Twitter Share for Key Verse */}
+            <a
+              id="btn-quick-tw-key-verse"
+              href={getTwitterShareUrl(
+                `"${currentDevotional.keyVerse.text}" — ${currentDevotional.keyVerse.reference}\n\n#DevocionalDiario #Biblia`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg text-[#0F1419] hover:bg-[#F0F2F5] transition-colors"
+              title="Postar versículo no Twitter/X"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+
+            {/* Modal button */}
+            <button
+              id="btn-share-verse"
+              onClick={() => {
+                setDevotionalToShare(undefined);
+                setShareModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#735A33] hover:text-[#42321B] px-2.5 py-1 rounded-lg hover:bg-[#EAE0D0] transition-colors"
+              title="Abrir opções de compartilhamento do versículo"
+            >
+              <Share2 className="w-3.5 h-3.5 text-[#8C6D3F]" />
+              <span>Compartilhar Versículo</span>
+            </button>
+          </div>
         </div>
 
         <blockquote className={`font-serif-devotional text-[#2E281F] italic font-medium ${fontSizes.verse}`}>
@@ -305,6 +412,97 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
             {para}
           </p>
         ))}
+      </div>
+
+      {/* Dedicated Social Sharing Section for Devotional */}
+      <div
+        id="devotional-social-share-card"
+        className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#F7F2E7] via-[#EFE7D8] to-[#E5DAC6] border border-[#DECEB7] shadow-xs space-y-3"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-serif-devotional text-lg font-bold text-[#2B2319] flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-[#8C6D3F]" />
+              <span>Compartilhe o Devocional de Hoje</span>
+            </h3>
+            <p className="text-xs text-[#6B5E4E]">
+              Edifique seus amigos, grupos de oração e família enviando esta mensagem
+            </p>
+          </div>
+
+          <button
+            id="btn-open-full-devotional-share"
+            onClick={() => {
+              setDevotionalToShare(currentDevotional);
+              setShareModalOpen(true);
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-[#8C6D3F] hover:bg-[#785C32] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors self-start sm:self-auto shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#F3DFC1]" />
+            <span>Gerar Cartão Visual</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[#D9C8AF]">
+          {/* WhatsApp */}
+          <a
+            id="btn-devotional-share-whatsapp"
+            href={getWhatsAppShareUrl(formatDevotionalForWhatsApp(currentDevotional))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#20BE5A] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            title="Enviar devocional no WhatsApp"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>WhatsApp</span>
+          </a>
+
+          {/* Instagram */}
+          <button
+            id="btn-devotional-share-instagram"
+            type="button"
+            onClick={handleCopyDevotionalForInstagram}
+            className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#E1306C] via-[#FD1D1D] to-[#F56040] hover:opacity-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            title="Copiar texto formatado para Instagram"
+          >
+            <Instagram className="w-4 h-4" />
+            <span>Instagram</span>
+          </button>
+
+          {/* Twitter / X */}
+          <a
+            id="btn-devotional-share-twitter"
+            href={getTwitterShareUrl(formatDevotionalForTwitter(currentDevotional))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="py-2.5 px-3 rounded-xl bg-[#0F1419] hover:bg-[#262B30] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            title="Postar resumo no Twitter/X"
+          >
+            <Twitter className="w-4 h-4" />
+            <span>Twitter / X</span>
+          </a>
+
+          {/* Copiar Texto */}
+          <button
+            id="btn-devotional-copy-text"
+            type="button"
+            onClick={handleCopyDevotionalText}
+            className="py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAF8F5] text-[#3D3428] border border-[#D9CEBF] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            title="Copiar devocional completo"
+          >
+            {copiedDevotional ? (
+              <>
+                <Check className="w-4 h-4 text-[#2D6A3E]" />
+                <span className="text-[#2D6A3E]">Copiado!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 text-[#8C6D3F]" />
+                <span>Copiar Texto</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Practical Action Box */}
@@ -422,9 +620,24 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
                   <span className="text-[11px] font-semibold text-[#8C6D3F] uppercase tracking-wide">
                     {item.theme}
                   </span>
-                  {isItemCompleted && (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A3E]" />
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {/* Share icon button */}
+                    <button
+                      id={`btn-share-devotional-${item.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDevotionalToShare(item);
+                        setShareModalOpen(true);
+                      }}
+                      className="p-1 rounded-lg text-[#7A7165] hover:text-[#8C6D3F] hover:bg-[#EFE9DF] transition-colors"
+                      title="Compartilhar este devocional"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                    {isItemCompleted && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#2D6A3E]" />
+                    )}
+                  </div>
                 </div>
                 <h4 className="font-serif-devotional font-semibold text-base text-[#2E281F]">
                   {item.title}
@@ -440,9 +653,10 @@ export const DevotionalView: React.FC<DevotionalViewProps> = ({
 
       {/* Share Modal */}
       <ShareVerseModal
-        reference={currentDevotional.keyVerse.reference}
-        text={currentDevotional.keyVerse.text}
-        themeName={currentDevotional.theme}
+        reference={devotionalToShare?.keyVerse.reference || currentDevotional.keyVerse.reference}
+        text={devotionalToShare?.keyVerse.text || currentDevotional.keyVerse.text}
+        themeName={devotionalToShare?.theme || currentDevotional.theme}
+        devotional={devotionalToShare}
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
       />

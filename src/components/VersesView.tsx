@@ -7,13 +7,23 @@ import {
   Heart,
   Copy,
   Check,
-  Bookmark,
-  BookOpen
+  BookOpen,
+  MessageCircle,
+  Twitter,
+  Instagram
 } from 'lucide-react';
 import { BibleVerse, UserPreferences } from '../types';
 import { BIBLE_VERSES_DATA } from '../data/versesData';
-import { devotionalTTS, TTSState } from '../utils/audioEngine';
+import { devotionalTTS, TTSState, soundSynthesizer } from '../utils/audioEngine';
 import { ShareVerseModal } from './ShareVerseModal';
+import {
+  formatVerseForWhatsApp,
+  formatVerseForTwitter,
+  formatVerseForInstagram,
+  getWhatsAppShareUrl,
+  getTwitterShareUrl,
+  copyTextToClipboard
+} from '../utils/shareUtils';
 
 interface VersesViewProps {
   preferences: UserPreferences;
@@ -31,6 +41,7 @@ export const VersesView: React.FC<VersesViewProps> = ({
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeModalVerse, setActiveModalVerse] = useState<BibleVerse | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const verseOfTheDay = BIBLE_VERSES_DATA[0];
 
@@ -60,12 +71,34 @@ export const VersesView: React.FC<VersesViewProps> = ({
 
   const copyVerse = async (verse: BibleVerse) => {
     try {
-      await navigator.clipboard.writeText(`"${verse.text}" — ${verse.reference} (${verse.version})`);
+      const formatted = `"${verse.text}"\n— ${verse.reference} (${verse.version})`;
+      await copyTextToClipboard(formatted);
+      soundSynthesizer.playChime();
       setCopiedId(verse.id);
+      showToast('Versículo copiado para a área de transferência!');
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
       // Fallback
     }
+  };
+
+  const handleCopyForInstagram = async (verse: BibleVerse) => {
+    const text = formatVerseForInstagram({
+      text: verse.text,
+      reference: verse.reference,
+      version: verse.version,
+      reflectionShort: verse.reflectionShort
+    });
+    const success = await copyTextToClipboard(text);
+    if (success) {
+      soundSynthesizer.playChime();
+      showToast('Texto copiado para o Instagram! Cole na legenda ou no sticker dos Stories.');
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const handleSpeakVerse = (verse: BibleVerse) => {
@@ -77,13 +110,24 @@ export const VersesView: React.FC<VersesViewProps> = ({
   };
 
   return (
-    <div id="verses-view" className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8">
+    <div id="verses-view" className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-8 relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          id="toast-verse-action"
+          className="fixed top-20 right-4 z-50 bg-[#2B2319] text-white px-5 py-3 rounded-2xl shadow-xl border border-[#483B2B] text-xs flex items-center gap-2.5 animate-fade-in"
+        >
+          <Sparkles className="w-4 h-4 text-[#E6C995]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Verse of the Day Banner */}
       <div
         id="verse-of-the-day-hero"
         className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#F5EFE4] via-[#EFE5D3] to-[#E5D7BE] border border-[#DECEB7] shadow-sm relative overflow-hidden"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-[#8C6D3F] text-white">
               <Sparkles className="w-4 h-4" />
@@ -93,22 +137,73 @@ export const VersesView: React.FC<VersesViewProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Social and Audio Action Controls */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               id="btn-speak-verse-of-day"
               onClick={() => handleSpeakVerse(verseOfTheDay)}
-              className="p-2 rounded-xl bg-white/70 hover:bg-white text-[#524535] transition-colors"
-              title="Ouvir versículo"
+              className="p-2 rounded-xl bg-white/80 hover:bg-white text-[#524535] transition-colors"
+              title="Ouvir versículo narrado"
             >
               <Volume2 className="w-4 h-4 text-[#8C6D3F]" />
             </button>
+
+            {/* Direct WhatsApp Share */}
+            <a
+              id="btn-whatsapp-verse-of-day"
+              href={getWhatsAppShareUrl(
+                formatVerseForWhatsApp({
+                  text: verseOfTheDay.text,
+                  reference: verseOfTheDay.reference,
+                  version: verseOfTheDay.version,
+                  reflectionShort: verseOfTheDay.reflectionShort,
+                  theme: verseOfTheDay.theme
+                })
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-white/80 hover:bg-[#25D366] hover:text-white text-[#25D366] transition-colors"
+              title="Enviar para WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+            </a>
+
+            {/* Direct Twitter / X Share */}
+            <a
+              id="btn-twitter-verse-of-day"
+              href={getTwitterShareUrl(
+                formatVerseForTwitter({
+                  text: verseOfTheDay.text,
+                  reference: verseOfTheDay.reference
+                })
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-white/80 hover:bg-[#0F1419] hover:text-white text-[#0F1419] transition-colors"
+              title="Postar no Twitter/X"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+
+            {/* Direct Instagram Copy */}
+            <button
+              id="btn-instagram-verse-of-day"
+              onClick={() => handleCopyForInstagram(verseOfTheDay)}
+              className="p-2 rounded-xl bg-white/80 hover:bg-[#E1306C] hover:text-white text-[#E1306C] transition-colors"
+              title="Copiar para Instagram Stories/Post"
+            >
+              <Instagram className="w-4 h-4" />
+            </button>
+
+            {/* Complete Share Modal */}
             <button
               id="btn-share-verse-of-day"
               onClick={() => setActiveModalVerse(verseOfTheDay)}
-              className="p-2 rounded-xl bg-white/70 hover:bg-white text-[#524535] transition-colors"
-              title="Gerar cartão para compartilhar"
+              className="px-3 py-2 rounded-xl bg-[#8C6D3F] hover:bg-[#785C32] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+              title="Opções de compartilhamento e cartão"
             >
-              <Share2 className="w-4 h-4 text-[#8C6D3F]" />
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Compartilhar</span>
             </button>
           </div>
         </div>
@@ -184,6 +279,23 @@ export const VersesView: React.FC<VersesViewProps> = ({
             const isFav = preferences.favoriteVerses.includes(verse.id);
             const isBeingCopied = copiedId === verse.id;
 
+            const verseWaUrl = getWhatsAppShareUrl(
+              formatVerseForWhatsApp({
+                text: verse.text,
+                reference: verse.reference,
+                version: verse.version,
+                reflectionShort: verse.reflectionShort,
+                theme: verse.theme
+              })
+            );
+
+            const verseTwUrl = getTwitterShareUrl(
+              formatVerseForTwitter({
+                text: verse.text,
+                reference: verse.reference
+              })
+            );
+
             return (
               <div
                 key={verse.id}
@@ -207,11 +319,12 @@ export const VersesView: React.FC<VersesViewProps> = ({
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-[#F0EAE1] flex items-center justify-between">
+                <div className="pt-3 border-t border-[#F0EAE1] flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-xs sm:text-sm text-[#3E3426]">
                     {verse.reference}
                   </span>
 
+                  {/* Action Icons */}
                   <div className="flex items-center gap-1">
                     {/* Audio TTS */}
                     <button
@@ -221,6 +334,40 @@ export const VersesView: React.FC<VersesViewProps> = ({
                       title="Ouvir em áudio"
                     >
                       <Volume2 className="w-4 h-4" />
+                    </button>
+
+                    {/* Quick WhatsApp Share */}
+                    <a
+                      id={`btn-share-whatsapp-verse-${verse.id}`}
+                      href={verseWaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg text-[#7A7165] hover:text-[#25D366] hover:bg-[#EBFBF0] transition-colors"
+                      title="Compartilhar no WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </a>
+
+                    {/* Quick Twitter Share */}
+                    <a
+                      id={`btn-share-twitter-verse-${verse.id}`}
+                      href={verseTwUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg text-[#7A7165] hover:text-[#0F1419] hover:bg-[#F0F2F5] transition-colors"
+                      title="Compartilhar no Twitter/X"
+                    >
+                      <Twitter className="w-4 h-4" />
+                    </a>
+
+                    {/* Quick Instagram Copy */}
+                    <button
+                      id={`btn-share-instagram-verse-${verse.id}`}
+                      onClick={() => handleCopyForInstagram(verse)}
+                      className="p-1.5 rounded-lg text-[#7A7165] hover:text-[#E1306C] hover:bg-[#FDF0F4] transition-colors"
+                      title="Copiar para Instagram"
+                    >
+                      <Instagram className="w-4 h-4" />
                     </button>
 
                     {/* Copy Text */}
@@ -237,12 +384,12 @@ export const VersesView: React.FC<VersesViewProps> = ({
                       )}
                     </button>
 
-                    {/* Share Card Modal */}
+                    {/* Complete Share Modal */}
                     <button
                       id={`btn-share-card-${verse.id}`}
                       onClick={() => setActiveModalVerse(verse)}
                       className="p-1.5 rounded-lg text-[#7A7165] hover:text-[#8C6D3F] hover:bg-[#F5EFE4] transition-colors"
-                      title="Gerar imagem/cartão para compartilhar"
+                      title="Abrir opções completas de compartilhamento"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -282,6 +429,7 @@ export const VersesView: React.FC<VersesViewProps> = ({
           reference={activeModalVerse.reference}
           text={activeModalVerse.text}
           themeName={activeModalVerse.theme}
+          reflectionShort={activeModalVerse.reflectionShort}
           isOpen={!!activeModalVerse}
           onClose={() => setActiveModalVerse(null)}
         />

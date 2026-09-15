@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   Flame,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Share2
 } from 'lucide-react';
 import { ReadingPlan, ReadingPlanDay, UserPreferences, ReadingPlanGoal } from '../types';
 import {
@@ -27,6 +28,7 @@ import {
 } from '../data/readingPlansData';
 import { devotionalTTS, soundSynthesizer, TTSState } from '../utils/audioEngine';
 import { ReadingGoalCustomizerModal } from './ReadingGoalCustomizerModal';
+import { ShareVerseModal } from './ShareVerseModal';
 
 interface ReadingPlanViewProps {
   preferences: UserPreferences;
@@ -56,6 +58,7 @@ export const ReadingPlanView: React.FC<ReadingPlanViewProps> = ({
   // Modal states
   const [selectedDayToRead, setSelectedDayToRead] = useState<ReadingPlanDay | null>(null);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [sharePassageData, setSharePassageData] = useState<{ reference: string; text: string } | null>(null);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -820,7 +823,21 @@ export const ReadingPlanView: React.FC<ReadingPlanViewProps> = ({
                     <span className="font-semibold text-sm text-[#8C6D3F]">
                       📖 {passage.reference}
                     </span>
-                    <span className="text-xs text-[#9E9385]">Texto Bíblico</span>
+                    <button
+                      id={`btn-share-reader-passage-${idx}`}
+                      type="button"
+                      onClick={() =>
+                        setSharePassageData({
+                          reference: passage.reference,
+                          text: passage.text,
+                        })
+                      }
+                      className="flex items-center gap-1.5 text-xs text-[#7A6F61] hover:text-[#8C6D3F] px-2.5 py-1 rounded-lg hover:bg-[#FAF6EE] transition-colors"
+                      title="Compartilhar versículo nas redes sociais"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-[#8C6D3F]" />
+                      <span>Compartilhar</span>
+                    </button>
                   </div>
                   <p className="font-serif-devotional text-base sm:text-lg leading-relaxed text-[#352D23]">
                     {passage.text}
@@ -874,6 +891,16 @@ export const ReadingPlanView: React.FC<ReadingPlanViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {/* Share Passage Modal */}
+      {sharePassageData && (
+        <ShareVerseModal
+          reference={sharePassageData.reference}
+          text={sharePassageData.text}
+          themeName="Plano de Leitura"
+          isOpen={!!sharePassageData}
+          onClose={() => setSharePassageData(null)}
+        />
       )}
     </div>
   );
